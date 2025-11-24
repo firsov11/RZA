@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android Studio
+.idea/
+*.iml
+
+# Local settings
+local.properties
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# NDK / external build
+.externalNativeBuild/
+.cxx/
+
+# Captures
+captures/
+
+# Cache
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
