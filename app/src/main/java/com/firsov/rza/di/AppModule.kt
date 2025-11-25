@@ -1,11 +1,13 @@
 package com.firsov.rza.di
 
+import android.content.Context
 import com.firsov.rza.data.parser.DocxParser
 import com.firsov.rza.data.repository.DocxRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Singleton
 
 @Module
@@ -14,10 +16,13 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDocxParser(): DocxParser = DocxParser()
+    fun provideDocxParser(@ApplicationContext context: Context): DocxParser =
+        DocxParser(context)
 
     @Provides
     @Singleton
-    fun provideDocxRepository(parser: DocxParser): DocxRepository = DocxRepository(parser)
+    fun provideDocxRepository(parser: DocxParser): DocxRepository =
+        DocxRepository(parser)
 }
+
 
