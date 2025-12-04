@@ -1,6 +1,5 @@
 package com.firsov.rza.ui.screens
 
-import BlockView
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -22,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.firsov.rza.ui.components.BlockView
 import com.firsov.rza.viewmodel.DocxViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

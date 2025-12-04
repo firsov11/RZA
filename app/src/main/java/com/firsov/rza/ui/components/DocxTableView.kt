@@ -1,3 +1,5 @@
+package com.firsov.rza.ui.components
+
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,9 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.firsov.rza.data.models.TableCellContent
 import com.firsov.rza.data.models.SimpleTable
+import com.firsov.rza.formula.FormulaViewWeb
 
 @Composable
 fun DocxTableView(rows: SimpleTable) {
@@ -21,14 +26,15 @@ fun DocxTableView(rows: SimpleTable) {
             .fillMaxWidth()
             .border(1.dp, Color.Gray)
     ) {
+
         rows.forEachIndexed { rowIndex, row ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min)
             ) {
-                row.forEachIndexed { cellIndex, cell ->
 
+                row.forEachIndexed { cellIndex, cell ->
                     // ЯЧЕЙКА
                     Box(
                         modifier = Modifier
@@ -36,6 +42,7 @@ fun DocxTableView(rows: SimpleTable) {
                             .padding(6.dp)
                     ) {
                         when (cell) {
+
                             is TableCellContent.Text ->
                                 Text(text = cell.value)
 
@@ -53,10 +60,24 @@ fun DocxTableView(rows: SimpleTable) {
                                     )
                                 }
                             }
+
+                            is TableCellContent.Formula -> {
+                                AndroidView(
+                                    factory = { context ->
+                                        FormulaViewWeb(context).apply {
+                                            setOmmlFormula(cell.ommlXml)
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 2.dp)
+                                )
+                            }
+
                         }
                     }
 
-                    // ВЕРТИКАЛЬНАЯ ЛИНИЯ (кроме последней ячейки)
+                    // ВЕРТИКАЛЬНАЯ ЛИНИЯ
                     if (cellIndex < row.lastIndex) {
                         Box(
                             modifier = Modifier
@@ -68,7 +89,7 @@ fun DocxTableView(rows: SimpleTable) {
                 }
             }
 
-            // ГОРИЗОНТАЛЬНАЯ ЛИНИЯ (кроме последней строки)
+            // ГОРИЗОНТАЛЬНАЯ ЛИНИЯ
             if (rowIndex < rows.lastIndex) {
                 Box(
                     modifier = Modifier
@@ -80,4 +101,3 @@ fun DocxTableView(rows: SimpleTable) {
         }
     }
 }
-

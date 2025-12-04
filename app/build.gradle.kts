@@ -78,4 +78,5 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.compose.icons.extended)
+
 }

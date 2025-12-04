@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.firsov.rza.data.models.Chapter
-import BlockView
 
 @Composable
 fun DocxDocumentView(chapters: List<Chapter>) {

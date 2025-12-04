@@ -1,9 +1,15 @@
 package com.firsov.rza.data.parser
 
 import android.content.Context
-import com.firsov.rza.data.models.*
+import com.firsov.rza.data.models.Chapter
+import com.firsov.rza.data.models.DocxBlock
+import com.firsov.rza.data.models.DocxTable
+import com.firsov.rza.data.models.TableCellContent
 import org.apache.poi.xwpf.usermodel.BodyElementType
 import org.apache.poi.xwpf.usermodel.XWPFDocument
+import org.apache.poi.xwpf.usermodel.XWPFParagraph
+import org.apache.poi.xwpf.usermodel.XWPFTable
+
 
 class DocxParser {
 
@@ -19,13 +25,15 @@ class DocxParser {
 
             when (bodyElement.elementType) {
 
+                // ================================
+                // ПАРАГРАФ
+                // ================================
                 BodyElementType.PARAGRAPH -> {
-                    val para = bodyElement as org.apache.poi.xwpf.usermodel.XWPFParagraph
-                    val text = para.text.trim()
+                    val para = bodyElement as XWPFParagraph
 
-                    // 📌 новый заголовок (Heading1)
+                    // Заголовок
+                    val text = para.text.trim()
                     if (para.style == "Heading1" && text.isNotEmpty()) {
-                        // сохраняем предыдущую главу
                         if (currentBlocks.isNotEmpty()) {
                             chapters.add(Chapter(currentTitle, currentBlocks))
                             currentBlocks = mutableListOf()
@@ -34,47 +42,22 @@ class DocxParser {
                         continue
                     }
 
-                    // текст
-                    if (text.isNotEmpty()) {
-                        currentBlocks.add(DocxText(text))
-                    }
-
-                    // картинки
-                    para.runs.forEach { run ->
-                        run.embeddedPictures.forEach { pic ->
-                            currentBlocks.add(DocxImage(pic.pictureData.data))
-                        }
-                    }
+                    // Обычный параграф → inline-парсинг
+                    val blocks = parseParagraphInline(para)
+                    currentBlocks.addAll(blocks)
                 }
 
+                // ================================
+                // ТАБЛИЦА
+                // ================================
                 BodyElementType.TABLE -> {
-                    val table = bodyElement as org.apache.poi.xwpf.usermodel.XWPFTable
-                    val parsedRows = mutableListOf<SimpleTableRow>()
+                    val table = bodyElement as XWPFTable
+                    val parsedRows = mutableListOf<List<TableCellContent>>()
 
                     table.rows.forEach { row ->
                         val parsedCells = row.tableCells.map { cell ->
-
-                            val blocks = mutableListOf<TableCellContent>()
-
-                            val cellText = cell.paragraphs.joinToString(" ") {
-                                it.runs.joinToString("") { r -> r.text().orEmpty() }
-                            }.trim()
-
-                            if (cellText.isNotEmpty()) {
-                                blocks.add(TableCellContent.Text(cellText))
-                            }
-
-                            cell.paragraphs.forEach { p ->
-                                p.runs.forEach { r ->
-                                    r.embeddedPictures.forEach { pic ->
-                                        blocks.add(TableCellContent.Image(pic.pictureData.data))
-                                    }
-                                }
-                            }
-
-                            if (blocks.isEmpty()) TableCellContent.Text("") else blocks.first()
+                            parseTableCell(cell).firstOrNull() ?: TableCellContent.Text("")
                         }
-
                         parsedRows.add(parsedCells)
                     }
 
@@ -85,7 +68,7 @@ class DocxParser {
             }
         }
 
-        // добавляем последнюю главу
+        // Последняя глава
         if (currentBlocks.isNotEmpty()) {
             chapters.add(Chapter(currentTitle, currentBlocks))
         }

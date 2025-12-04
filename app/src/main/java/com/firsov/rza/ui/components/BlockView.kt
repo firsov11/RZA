@@ -1,3 +1,5 @@
+package com.firsov.rza.ui.components
+
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,10 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
-import com.firsov.rza.data.models.DocxBlock
-import com.firsov.rza.data.models.DocxImage
-import com.firsov.rza.data.models.DocxTable
-import com.firsov.rza.data.models.DocxText
+import com.firsov.rza.data.models.*
+import androidx.compose.ui.viewinterop.AndroidView
+import com.firsov.rza.formula.FormulaViewWeb
 
 @Composable
 fun BlockView(block: DocxBlock) {
@@ -40,5 +41,19 @@ fun BlockView(block: DocxBlock) {
 
         is DocxTable ->
             DocxTableView(block.rows)
+
+        is DocxFormula -> {
+            AndroidView(
+                factory = { context ->
+                    FormulaViewWeb(context).apply {
+                        setOmmlFormula(block.ommlXml)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            )
+        }
     }
 }
+
