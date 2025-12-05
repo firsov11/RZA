@@ -15,72 +15,67 @@ class FormulaViewWeb @JvmOverloads constructor(
     override val coroutineContext: CoroutineContext
         get() = Dispatchers.Main + job
 
-    private val webView: WebView = WebView(context).apply {
-        layoutParams = LayoutParams(
-            LayoutParams.MATCH_PARENT,
-            LayoutParams.WRAP_CONTENT
-        )
+    private val webView = WebView(context).apply {
         settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
     }
 
-    private var currentRenderJob: Job? = null
+    private var currentJob: Job? = null
     private var omml: String? = null
 
     init {
         addView(webView)
-        Log.d("FormulaViewWeb", "WebView initialized")
     }
 
     fun setOmmlFormula(xml: String?) {
-        Log.d("FormulaViewWeb", "setOmmlFormula called")
         omml = xml
         renderFormula()
     }
 
     private fun renderFormula() {
-        Log.d("FormulaViewWeb", "renderFormula called")
-        currentRenderJob?.cancel()
+        currentJob?.cancel()
 
-        val xml = omml ?: run {
-            Log.d("FormulaViewWeb", "OMML is null, clearing WebView")
-            webView.loadData("", "text/html", "UTF-8")
-            return
-        }
+        val xml = omml ?: return webView.loadData("", "text/html", "UTF-8")
 
-        currentRenderJob = launch {
-            val latex: String? = withContext(Dispatchers.Default) {
-                try {
-                    Log.d("FormulaViewWeb", "Converting OMML to LaTeX")
-                    Omml2Latex.convert(xml)
-                } catch (e: Exception) {
-                    Log.e("FormulaViewWeb", "Error converting OMML to LaTeX", e)
-                    null
-                }
+        currentJob = launch {
+            val mathML = withContext(Dispatchers.Default) {
+                OmmlToMathML.convert(context, xml)
             }
 
-            Log.d("FormulaViewWeb", "Conversion result: $latex")
+            Log.d("OMML", "MathML output: $mathML")
 
-            val html = if (!latex.isNullOrEmpty()) {
-                """
+            if (mathML.isNullOrBlank()) {
+                webView.loadData("", "text/html", "UTF-8")
+                return@launch
+            }
+
+            val html = """
                 <html>
                 <head>
-                  <script type="text/javascript"
-                    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js">
-                  </script>
+                  <meta charset="utf-8"/>
+                  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
                   <style>
-                    body { font-size: 18px; text-align: center; margin: 0; padding: 0; }
+                    body {
+                      margin: 0;
+                      padding: 0;
+                      font-size: 18px;
+                      display: flex;
+                      justify-content: center;
+                    }
                   </style>
                 </head>
                 <body>
-                  $$${latex}$$
+                  $mathML
+                  <script>
+                    if (window.MathJax) {
+                        MathJax.typeset();
+                    }
+                  </script>
                 </body>
                 </html>
-                """.trimIndent()
-            } else {
-                ""
-            }
+            """.trimIndent()
 
-            Log.d("FormulaViewWeb", "Loading HTML into WebView")
             webView.loadDataWithBaseURL("about:blank", html, "text/html", "UTF-8", null)
         }
     }
@@ -88,6 +83,5 @@ class FormulaViewWeb @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         job.cancel()
-        Log.d("FormulaViewWeb", "onDetachedFromWindow called, job cancelled")
     }
 }

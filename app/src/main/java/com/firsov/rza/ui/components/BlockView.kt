@@ -49,6 +49,10 @@ fun BlockView(block: DocxBlock) {
                         setOmmlFormula(block.ommlXml)
                     }
                 },
+                update = { view ->
+                    // Важно: если Composable перерисуется — формула обновится
+                    view.setOmmlFormula(block.ommlXml)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
@@ -56,4 +60,5 @@ fun BlockView(block: DocxBlock) {
         }
     }
 }
+
 
