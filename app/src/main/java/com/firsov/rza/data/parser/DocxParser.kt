@@ -3,77 +3,119 @@ package com.firsov.rza.data.parser
 import android.content.Context
 import com.firsov.rza.data.models.Chapter
 import com.firsov.rza.data.models.DocxBlock
+import com.firsov.rza.data.models.DocxImage
 import com.firsov.rza.data.models.DocxTable
+import com.firsov.rza.data.models.DocxText
+import com.firsov.rza.data.models.SimpleTable
 import com.firsov.rza.data.models.TableCellContent
 import org.apache.poi.xwpf.usermodel.BodyElementType
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.apache.poi.xwpf.usermodel.XWPFParagraph
 import org.apache.poi.xwpf.usermodel.XWPFTable
-
+import org.apache.poi.xwpf.usermodel.XWPFTableCell
 
 class DocxParser {
 
     fun parseAssetDocx(context: Context, fileName: String): List<Chapter> {
-        val inputStream = context.assets.open("docs/$fileName")
-        val document = XWPFDocument(inputStream)
+        context.assets.open("docs/$fileName").use { input ->
+            val document = XWPFDocument(input)
 
-        val chapters = mutableListOf<Chapter>()
-        var currentTitle = "Без названия"
-        var currentBlocks = mutableListOf<DocxBlock>()
+            val chapters = mutableListOf<Chapter>()
+            var currentTitle = "Без названия"
+            var currentBlocks = mutableListOf<DocxBlock>()
 
-        for (bodyElement in document.bodyElements) {
+            document.bodyElements.forEach { bodyElement ->
+                when (bodyElement.elementType) {
 
-            when (bodyElement.elementType) {
+                    BodyElementType.PARAGRAPH -> {
+                        val para = bodyElement as XWPFParagraph
+                        val text = para.text.trim()
 
-                // ================================
-                // ПАРАГРАФ
-                // ================================
-                BodyElementType.PARAGRAPH -> {
-                    val para = bodyElement as XWPFParagraph
-
-                    // Заголовок
-                    val text = para.text.trim()
-                    if (para.style == "Heading1" && text.isNotEmpty()) {
-                        if (currentBlocks.isNotEmpty()) {
-                            chapters.add(Chapter(currentTitle, currentBlocks))
-                            currentBlocks = mutableListOf()
+                        if (para.style == "Heading1" && text.isNotEmpty()) {
+                            if (currentBlocks.isNotEmpty()) {
+                                chapters += Chapter(currentTitle, currentBlocks)
+                                currentBlocks = mutableListOf()
+                            }
+                            currentTitle = text
+                        } else {
+                            currentBlocks += parseParagraphInline(para)
                         }
-                        currentTitle = text
-                        continue
                     }
 
-                    // Обычный параграф → inline-парсинг
-                    val blocks = parseParagraphInline(para)
-                    currentBlocks.addAll(blocks)
-                }
-
-                // ================================
-                // ТАБЛИЦА
-                // ================================
-                BodyElementType.TABLE -> {
-                    val table = bodyElement as XWPFTable
-                    val parsedRows = mutableListOf<List<TableCellContent>>()
-
-                    table.rows.forEach { row ->
-                        val parsedCells = row.tableCells.map { cell ->
-                            parseTableCell(cell).firstOrNull() ?: TableCellContent.Text("")
-                        }
-                        parsedRows.add(parsedCells)
+                    BodyElementType.TABLE -> {
+                        val table = bodyElement as XWPFTable
+                        currentBlocks += DocxTable(parseTable(table))
                     }
 
-                    currentBlocks.add(DocxTable(parsedRows))
+                    else -> Unit
                 }
-
-                else -> Unit
             }
-        }
 
-        // Последняя глава
-        if (currentBlocks.isNotEmpty()) {
-            chapters.add(Chapter(currentTitle, currentBlocks))
-        }
+            if (currentBlocks.isNotEmpty()) {
+                chapters += Chapter(currentTitle, currentBlocks)
+            }
 
-        document.close()
-        return chapters
+            return chapters
+        }
     }
 }
+
+
+fun parseParagraphInline(p: XWPFParagraph): List<DocxBlock> {
+    val result = mutableListOf<DocxBlock>()
+    val textBuffer = StringBuilder()
+
+    fun flushText() {
+        if (textBuffer.isNotEmpty()) {
+            result += DocxText(textBuffer.toString())
+            textBuffer.clear()
+        }
+    }
+
+    p.runs.forEach { run ->
+        val pics = run.embeddedPictures
+
+        if (pics.isNotEmpty()) {
+            flushText()
+            pics.forEach { pic ->
+                result += DocxImage(bytes = pic.pictureData.data)
+            }
+        } else {
+            run.text()?.let { textBuffer.append(it) }
+        }
+    }
+
+    flushText()
+    return result
+}
+
+
+
+fun parseTable(table: XWPFTable): SimpleTable {
+    return table.rows.map { row ->
+        row.tableCells.map { cell ->
+            parseSingleTableCell(cell)
+        }
+    }
+}
+
+fun parseSingleTableCell(cell: XWPFTableCell): TableCellContent {
+    val textBuffer = StringBuilder()
+
+    cell.paragraphs.forEach { p ->
+        p.runs.forEach { r ->
+
+            val pics = r.embeddedPictures
+            if (pics.isNotEmpty()) {
+                return TableCellContent.Image(
+                    bytes = pics.first().pictureData.data
+                )
+            }
+
+            r.text()?.let { textBuffer.append(it) }
+        }
+    }
+
+    return TableCellContent.Text(textBuffer.toString())
+}
+

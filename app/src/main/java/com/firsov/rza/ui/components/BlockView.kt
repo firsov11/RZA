@@ -11,24 +11,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import com.firsov.rza.data.models.*
-import androidx.compose.ui.viewinterop.AndroidView
-import com.firsov.rza.formula.FormulaViewWeb
 
 @Composable
 fun BlockView(block: DocxBlock) {
     when (block) {
 
-        is DocxText ->
+        is DocxText -> {
             Text(
                 text = block.text,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
+        }
 
         is DocxImage -> {
-            val bmp = remember(block.bytes) {
-                BitmapFactory.decodeByteArray(block.bytes, 0, block.bytes.size)?.asImageBitmap()
+            val bitmap = remember(block.bytes) {
+                BitmapFactory.decodeByteArray(
+                    block.bytes,
+                    0,
+                    block.bytes.size
+                )?.asImageBitmap()
             }
-            bmp?.let {
+
+            bitmap?.let {
                 Image(
                     bitmap = it,
                     contentDescription = null,
@@ -39,26 +43,8 @@ fun BlockView(block: DocxBlock) {
             }
         }
 
-        is DocxTable ->
+        is DocxTable -> {
             DocxTableView(block.rows)
-
-        is DocxFormula -> {
-            AndroidView(
-                factory = { context ->
-                    FormulaViewWeb(context).apply {
-                        setOmmlFormula(block.ommlXml)
-                    }
-                },
-                update = { view ->
-                    // Важно: если Composable перерисуется — формула обновится
-                    view.setOmmlFormula(block.ommlXml)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            )
         }
     }
 }
-
-

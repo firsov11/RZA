@@ -11,12 +11,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.firsov.rza.data.models.TableCellContent
 import com.firsov.rza.data.models.SimpleTable
-import com.firsov.rza.formula.FormulaViewWeb
+import com.firsov.rza.data.models.TableCellContent
 
 @Composable
 fun DocxTableView(rows: SimpleTable) {
@@ -28,14 +25,13 @@ fun DocxTableView(rows: SimpleTable) {
     ) {
 
         rows.forEachIndexed { rowIndex, row ->
+
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
+                modifier = Modifier.fillMaxWidth()
             ) {
 
                 row.forEachIndexed { cellIndex, cell ->
-                    // ЯЧЕЙКА
+
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -43,16 +39,22 @@ fun DocxTableView(rows: SimpleTable) {
                     ) {
                         when (cell) {
 
-                            is TableCellContent.Text ->
+                            is TableCellContent.Text -> {
                                 Text(text = cell.value)
+                            }
 
                             is TableCellContent.Image -> {
-                                val bmp = remember(cell.bytes) {
-                                    BitmapFactory.decodeByteArray(
-                                        cell.bytes, 0, cell.bytes.size
-                                    )?.asImageBitmap()
+                                val bitmap = remember(cell.bytes) {
+                                    BitmapFactory
+                                        .decodeByteArray(
+                                            cell.bytes,
+                                            0,
+                                            cell.bytes.size
+                                        )
+                                        ?.asImageBitmap()
                                 }
-                                bmp?.let {
+
+                                bitmap?.let {
                                     Image(
                                         bitmap = it,
                                         contentDescription = null,
@@ -61,23 +63,11 @@ fun DocxTableView(rows: SimpleTable) {
                                 }
                             }
 
-                            is TableCellContent.Formula -> {
-                                AndroidView(
-                                    factory = { context ->
-                                        FormulaViewWeb(context).apply {
-                                            setOmmlFormula(cell.ommlXml)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 2.dp)
-                                )
-                            }
-
+                            // ❌ ФОРМУЛ НЕТ
                         }
                     }
 
-                    // ВЕРТИКАЛЬНАЯ ЛИНИЯ
+                    // вертикальная линия
                     if (cellIndex < row.lastIndex) {
                         Box(
                             modifier = Modifier
@@ -89,7 +79,7 @@ fun DocxTableView(rows: SimpleTable) {
                 }
             }
 
-            // ГОРИЗОНТАЛЬНАЯ ЛИНИЯ
+            // горизонтальная линия
             if (rowIndex < rows.lastIndex) {
                 Box(
                     modifier = Modifier
