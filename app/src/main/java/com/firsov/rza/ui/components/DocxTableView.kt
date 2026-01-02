@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,28 +28,34 @@ fun DocxTableView(table: DocxTableModel) {
     val borderColor = Color(0xFF6E6E6E)
     val outerBorder = 1.5.dp
     val innerBorder = 0.8.dp
+    val cellPadding = 8.dp
+    val minRowHeight = 24.dp // минимальная высота строки
 
     Column(
         modifier = Modifier
-            .fillMaxWidth() // Таблица растягивается на весь экран
+            .fillMaxWidth()
             .border(outerBorder, borderColor)
-            .padding(vertical = 8.dp)
     ) {
         table.rows.forEach { row ->
+            // Пропускаем полностью пустые строки
+            if (row.cells.all { it == null || it.content == null }) return@forEach
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(IntrinsicSize.Min) // Высота строки = высота самой высокой ячейки
+                    .height(IntrinsicSize.Min)
+                    .padding(vertical = 0.dp) // убираем лишние паддинги у Row
             ) {
                 row.cells.forEach { cell ->
-                    if (cell == null) return@forEach // Продолжение объединённой ячейки → пропускаем
+                    if (cell == null) return@forEach // пропуск объединённых ячеек
 
                     Box(
                         modifier = Modifier
                             .weight(cell.colSpan.toFloat(), fill = true)
                             .fillMaxHeight()
                             .border(innerBorder, borderColor)
-                            .padding(8.dp),
+                            .padding(cellPadding)
+                            .heightIn(min = minRowHeight), // минимальная высота
                         contentAlignment = Alignment.TopStart
                     ) {
                         when (val content = cell.content) {
@@ -70,6 +77,8 @@ fun DocxTableView(table: DocxTableModel) {
 
                                 bitmap?.let { ZoomableImage(bitmap = it) }
                             }
+
+                            else -> {} // пустой контент → просто Box с минимальной высотой
                         }
                     }
                 }
